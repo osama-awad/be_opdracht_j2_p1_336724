@@ -14,15 +14,20 @@ class Instructeur extends BaseController
         $result = $this->instructeurModel->getInstructeurs();
 
         //  var_dump($result);
-
         $rows = "";
         foreach ($result as $instructeur) {
+            /**
+             * Datum in het juiste formaat gezet
+             */
+            $date = date_create($instructeur->DatumInDienst);
+            $formatted_date = date_format($date, 'd-m-Y');
+
             $rows .= "<tr>
                         <td>$instructeur->Voornaam</td>
                         <td>$instructeur->Tussenvoegsel</td>
                         <td>$instructeur->Achternaam</td>
                         <td>$instructeur->Mobiel</td>
-                        <td>$instructeur->DatumInDienst</td>            
+                        <td>$formatted_date</td>            
                         <td>$instructeur->AantalSterren</td>            
                         <td>
                             <a href='" . URLROOT . "/instructeur/overzichtvoertuigen/$instructeur->Id'>
@@ -31,7 +36,7 @@ class Instructeur extends BaseController
                         </td>            
                       </tr>";
         }
-        
+
         $data = [
             'title' => 'Instructeurs in dienst',
             'rows' => $rows
@@ -42,8 +47,86 @@ class Instructeur extends BaseController
 
     public function overzichtVoertuigen($Id)
     {
+
+        $instructeurInfo = $this->instructeurModel->getInstructeurById($Id);
+
+        // var_dump($instructeurInfo);
+        $naam = $instructeurInfo->Voornaam . " " . $instructeurInfo->Tussenvoegsel . " " . $instructeurInfo->Achternaam;
+        $datumInDienst = $instructeurInfo->DatumInDienst;
+        $aantalSterren = $instructeurInfo->AantalSterren;
+
+        /**
+         * We laten de model alle gegevens ophalen uit de database
+         */
         $result = $this->instructeurModel->getToegewezenVoertuigen($Id);
 
-        var_dump($result);
+
+        $tableRows = "";
+        if (empty($result)) {
+            /**
+             * Als er geen toegewezen voertuigen zijn komt de onderstaande tekst in de tabel
+             */
+            $tableRows = "<tr>
+                            <td colspan='6'>
+                                Er zijn op dit moment nog geen voertuigen toegewezen aan deze instructeur
+                            </td>
+                          </tr>";
+        } else {
+            /**
+             * Bouw de rows op in een foreach-loop en stop deze in de variabele
+             * $tabelRows
+             */
+            foreach ($result as $voertuig) {
+
+                /**
+                 * Zet de datum in het juiste format
+                 */
+                $date_formatted = date_format(date_create($voertuig->Bouwjaar), 'd-m-Y');
+
+                $tableRows .= "<tr>
+                                    <td>$voertuig->TypeVoertuig</td>
+                                    <td>$voertuig->Type</td>
+                                    <td>$voertuig->Kenteken</td>
+                                    <td>$date_formatted</td>
+                                    <td>$voertuig->Brandstof</td>
+                                    <td>$voertuig->RijbewijsCategorie</td>      
+                                    <td>
+                                        <a href='" . URLROOT . "/instructeur/overzichtvoertuig_wijzgen/$voertuig->Id/$Id'>update</a>
+                                    </td>      
+                            </tr>";
+            }
+        }
+
+
+        $data = [
+            'title'     => 'Door instructeur gebruikte voertuigen',
+            'tableRows' => $tableRows,
+            'naam'      => $naam,
+            'datumInDienst' => $datumInDienst,
+            'aantalSterren' => $aantalSterren
+        ];
+
+        $this->view('Instructeur/overzichtVoertuigen', $data);
     }
+    function overzichtvoertuig_wijzgen($voertuigId, $instructeurId)
+    {
+
+        $voertuiginfo = $this->instructeurModel->getToegewezenVoertuig($instructeurId, $voertuigId);
+        $instructeurs = $this->instructeurModel->getInstructeurs();
+        $typevoertuigen = $this->instructeurModel->getTypeVoertuigen();
+
+        $data = [
+            'voertuigId' => $voertuigId,
+            'instructerId' => $instructeurId, 
+            'instructeurs' => $instructeurs, 
+            'typevoertuigen' => $typevoertuigen,
+            'voertuigInfo' => $voertuiginfo
+        ];
+        $this->view('Instructeur/overzichtvoertuig_wijzgen', $data);
+    }
+     function overzichtvoertuigen_wijzig_save($voertuigId, $instructeurId) {
+        $this->instructeurModel->updateVoertuig($voertuigId);
+        $this->instructeurModel->updateVoertuiginstructeur($voertuigId);
+        $this->overzichtvoertuigen($instructeurId);
+     }
 }

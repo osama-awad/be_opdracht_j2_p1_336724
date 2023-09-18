@@ -27,11 +27,19 @@ class Database
     {
         $this->statement = $this->dbHandler->prepare($sql);
     }
-
+public function bind($param, $value){
+    $this->statement->bindValue($param, $value);
+}
     public function resultSet()
     {
         $this->statement->execute();
         return $this->statement->fetchAll(PDO::FETCH_OBJ);
+    }
+
+    public function single()
+    {
+        $this->statement->execute();
+        return $this->statement->fetch(PDO::FETCH_OBJ);
     }
 
 
